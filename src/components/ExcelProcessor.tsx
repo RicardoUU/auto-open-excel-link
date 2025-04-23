@@ -288,7 +288,7 @@ const ExcelProcessor = () => {
     });
   };
 
-  const handleViewModeChange = (event: React.MouseEvent<HTMLElement>, newMode: 'table' | 'cards' | null) => {
+  const handleViewModeChange = (_: React.MouseEvent<HTMLElement>, newMode: 'table' | 'cards' | null) => {
     if (newMode !== null) {
       setViewMode(newMode);
     }
