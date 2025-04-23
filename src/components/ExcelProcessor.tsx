@@ -1,6 +1,44 @@
 import { ChangeEvent, useState } from 'react';
 import * as XLSX from 'xlsx';
-import './ExcelProcessor.css';
+import { 
+  Button, 
+  Paper, 
+  Typography, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  Card,
+  CardHeader,
+  CardContent,
+  CardActions,
+  Box,
+  CircularProgress,
+  Chip,
+  Divider,
+  Stack,
+  Link,
+  IconButton,
+  SelectChangeEvent,
+  ToggleButtonGroup,
+  ToggleButton
+} from '@mui/material';
+import { 
+  CloudUpload as CloudUploadIcon, 
+  OpenInNew as OpenInNewIcon,
+  ContentCopy as ContentCopyIcon,
+  TableChart as TableChartIcon,
+  ViewModule as ViewModuleIcon,
+  CheckCircle as CheckCircleIcon,
+  Link as LinkIcon
+} from '@mui/icons-material';
 
 interface ExcelLink {
   text: string;
@@ -84,7 +122,7 @@ const ExcelProcessor = () => {
     reader.readAsArrayBuffer(selectedFile);
   };
 
-  const handleSheetChange = (e: ChangeEvent<HTMLSelectElement>) => {
+  const handleSheetChange = (e: SelectChangeEvent) => {
     const sheetName = e.target.value;
     setSelectedSheet(sheetName);
     
@@ -132,6 +170,29 @@ const ExcelProcessor = () => {
     });
 
     setLinks(extractedLinks);
+  };
+
+  // 处理链接选择
+  const toggleLinkSelection = (index: number) => {
+    const newSelection = new Set(selectedLinks);
+    if (newSelection.has(index)) {
+      newSelection.delete(index);
+    } else {
+      newSelection.add(index);
+    }
+    setSelectedLinks(newSelection);
+  };
+
+  // 全选/取消全选
+  const toggleSelectAll = () => {
+    if (selectedLinks.size === links.length) {
+      // 如果已全选，则取消所有选择
+      setSelectedLinks(new Set());
+    } else {
+      // 如果未全选，则全选
+      const allIndices = new Set(links.map((_, index) => index));
+      setSelectedLinks(allIndices);
+    }
   };
 
   const openAllLinks = () => {
@@ -203,29 +264,6 @@ const ExcelProcessor = () => {
     });
   };
 
-  // 处理链接选择
-  const toggleLinkSelection = (index: number) => {
-    const newSelection = new Set(selectedLinks);
-    if (newSelection.has(index)) {
-      newSelection.delete(index);
-    } else {
-      newSelection.add(index);
-    }
-    setSelectedLinks(newSelection);
-  };
-
-  // 全选/取消全选
-  const toggleSelectAll = () => {
-    if (selectedLinks.size === links.length) {
-      // 如果已全选，则取消所有选择
-      setSelectedLinks(new Set());
-    } else {
-      // 如果未全选，则全选
-      const allIndices = new Set(links.map((_, index) => index));
-      setSelectedLinks(allIndices);
-    }
-  };
-
   // 只打开选定的链接
   const openSelectedLinks = () => {
     if (selectedLinks.size === 0) {
@@ -250,210 +288,318 @@ const ExcelProcessor = () => {
     });
   };
 
+  const handleViewModeChange = (event: React.MouseEvent<HTMLElement>, newMode: 'table' | 'cards' | null) => {
+    if (newMode !== null) {
+      setViewMode(newMode);
+    }
+  };
+
   return (
-    <div className="excel-processor">
-      <h2>Excel链接解析器</h2>
+    <Paper elevation={3} sx={{ p: 3, borderRadius: 2, maxWidth: 1200, mx: 'auto' }}>
+      <Typography variant="h4" component="h2" gutterBottom align="center" sx={{ mb: 3 }}>
+        Excel链接解析器
+      </Typography>
       
-      <div 
-        className={`file-input ${dragActive ? 'drag-active' : ''}`}
+      <Box 
+        sx={{
+          border: dragActive ? '2px dashed #4caf50' : '2px dashed #e0e0e0',
+          borderRadius: 2,
+          p: 3,
+          backgroundColor: dragActive ? 'rgba(76, 175, 80, 0.05)' : '#f9f9f9',
+          textAlign: 'center',
+          transition: 'all 0.3s',
+          mb: 3
+        }}
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
       >
-        <div className="file-icon"></div>
-        <p className="file-title">选择或拖放Excel文件</p>
-        <input 
+        <LinkIcon color="primary" sx={{ fontSize: 48, mb: 2, opacity: 0.7 }} />
+        <Typography variant="h6" gutterBottom>
+          选择或拖放Excel文件
+        </Typography>
+        <input
           id="file-upload"
-          type="file" 
-          accept=".xlsx, .xls" 
-          onChange={handleFileChange} 
-          className="file-upload"
+          type="file"
+          accept=".xlsx, .xls"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
         />
-        <label htmlFor="file-upload" className="file-upload-label">
-          选择文件
+        <label htmlFor="file-upload">
+          <Button
+            variant="contained"
+            component="span"
+            startIcon={<CloudUploadIcon />}
+            sx={{ mb: 1 }}
+          >
+            选择文件
+          </Button>
         </label>
-        <p className="file-help">支持的格式: .xlsx, .xls</p>
-        {file && <p className="selected-file">已选择: {file.name}</p>}
-      </div>
+        <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+          支持的格式: .xlsx, .xls
+        </Typography>
+        {file && (
+          <Chip 
+            label={file.name} 
+            color="primary" 
+            variant="outlined" 
+            sx={{ mt: 2 }} 
+          />
+        )}
+      </Box>
 
       {isProcessing && (
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>正在处理文件，请稍候...</p>
-        </div>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', my: 3 }}>
+          <CircularProgress size={40} />
+          <Typography variant="body1" sx={{ mt: 2 }}>
+            正在处理文件，请稍候...
+          </Typography>
+        </Box>
       )}
 
       {sheetNames.length > 0 && (
-        <div className="sheet-selector">
-          <label htmlFor="sheet-select">选择工作表:</label>
-          <select 
-            id="sheet-select" 
-            value={selectedSheet} 
-            onChange={handleSheetChange}
-          >
-            {sheetNames.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-        </div>
+        <Box sx={{ my: 3, backgroundColor: '#f5f5f5', p: 2, borderRadius: 1 }}>
+          <FormControl fullWidth>
+            <InputLabel id="sheet-select-label">选择工作表</InputLabel>
+            <Select
+              labelId="sheet-select-label"
+              id="sheet-select"
+              value={selectedSheet}
+              label="选择工作表"
+              onChange={handleSheetChange}
+            >
+              {sheetNames.map((name) => (
+                <MenuItem key={name} value={name}>{name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
       )}
 
       {links.length > 0 ? (
-        <div className="links-section">
-          <h3>找到 {links.length} 个链接</h3>
-          <div className="buttons-group">
-            <button onClick={openAllLinks} className="open-links-btn">
-              {openingLinks ? '结束批量打开' : '打开所有链接'}
-            </button>
-            {selectedLinks.size > 0 && (
-              <button onClick={openSelectedLinks} className="open-selected-btn">
-                打开已选择的链接 ({selectedLinks.size})
-              </button>
-            )}
-            {navigator.clipboard && (
-              <button onClick={copyAllLinks} className="copy-links-btn">
-                复制所有链接
-              </button>
-            )}
-          </div>
+        <Box sx={{ mt: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" component="h3">
+              找到 {links.length} 个链接
+            </Typography>
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={handleViewModeChange}
+              size="small"
+            >
+              <ToggleButton value="table">
+                <TableChartIcon fontSize="small" />
+              </ToggleButton>
+              <ToggleButton value="cards">
+                <ViewModuleIcon fontSize="small" />
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
 
-          {/* 视图切换 */}
-          <div className="view-toggle">
-            <button 
-              className={`view-btn ${viewMode === 'table' ? 'active' : ''}`}
-              onClick={() => setViewMode('table')}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              startIcon={<OpenInNewIcon />}
+              onClick={openAllLinks}
+              fullWidth
             >
-              表格视图
-            </button>
-            <button 
-              className={`view-btn ${viewMode === 'cards' ? 'active' : ''}`}
-              onClick={() => setViewMode('cards')}
-            >
-              卡片视图
-            </button>
-          </div>
+              {openingLinks ? '结束批量打开' : '打开所有链接'}
+            </Button>
+            
+            {selectedLinks.size > 0 && (
+              <Button 
+                variant="contained" 
+                color="warning" 
+                startIcon={<CheckCircleIcon />}
+                onClick={openSelectedLinks}
+                fullWidth
+              >
+                打开已选择的链接 ({selectedLinks.size})
+              </Button>
+            )}
+            
+            {navigator.clipboard && (
+              <Button 
+                variant="outlined" 
+                color="primary" 
+                startIcon={<ContentCopyIcon />}
+                onClick={copyAllLinks}
+                fullWidth
+              >
+                复制所有链接
+              </Button>
+            )}
+          </Stack>
           
           {openingLinks && currentLinkIndex < links.length && (
-            <div className="opening-status">
-              <p>正在准备打开第 {currentLinkIndex + 1}/{links.length} 个链接</p>
-              <button onClick={openNextLink} className="open-next-btn">
+            <Paper elevation={1} sx={{ p: 2, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid #4caf50' }}>
+              <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                正在准备打开第 {currentLinkIndex + 1}/{links.length} 个链接
+              </Typography>
+              <Button 
+                variant="contained" 
+                color="warning" 
+                onClick={openNextLink}
+                size="small"
+              >
                 打开下一个链接
-              </button>
-            </div>
+              </Button>
+            </Paper>
           )}
           
-          <div className="links-list">
-            {viewMode === 'table' ? (
-              <table>
-                <thead>
-                  <tr>
-                    <th className="checkbox-cell">
-                      <input 
-                        type="checkbox" 
+          {viewMode === 'table' ? (
+            <TableContainer component={Paper} elevation={1}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell padding="checkbox">
+                      <Checkbox
                         checked={selectedLinks.size === links.length}
                         onChange={toggleSelectAll}
+                        indeterminate={selectedLinks.size > 0 && selectedLinks.size < links.length}
                       />
-                    </th>
-                    <th>文本</th>
-                    <th>URL</th>
-                    <th>位置</th>
-                    {openingLinks && <th>操作</th>}
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableCell>
+                    <TableCell>文本</TableCell>
+                    <TableCell>URL</TableCell>
+                    <TableCell>位置</TableCell>
+                    {openingLinks && <TableCell>操作</TableCell>}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {links.map((link, index) => (
-                    <tr 
-                      key={index} 
-                      className={`
-                        ${currentLinkIndex === index ? 'current-link' : ''}
-                        ${selectedLinks.has(index) ? 'selected-link' : ''}
-                      `}
+                    <TableRow 
+                      key={index}
+                      sx={{ 
+                        backgroundColor: currentLinkIndex === index ? 'rgba(76, 175, 80, 0.08)' : 'inherit',
+                        borderLeft: currentLinkIndex === index ? '3px solid #4caf50' : 'none',
+                        '&.Mui-selected, &.Mui-selected:hover': {
+                          backgroundColor: 'rgba(33, 150, 243, 0.08)',
+                        }
+                      }}
+                      selected={selectedLinks.has(index)}
                     >
-                      <td className="checkbox-cell">
-                        <input 
-                          type="checkbox" 
+                      <TableCell padding="checkbox">
+                        <Checkbox
                           checked={selectedLinks.has(index)}
                           onChange={() => toggleLinkSelection(index)}
                         />
-                      </td>
-                      <td>{link.text}</td>
-                      <td>
-                        <a 
-                          href={link.url} 
-                          target="_blank" 
+                      </TableCell>
+                      <TableCell>{link.text}</TableCell>
+                      <TableCell>
+                        <Link
+                          href={link.url}
+                          target="_blank"
                           rel="noopener noreferrer"
-                          className={openingLinks ? 'highlight-link' : ''}
+                          sx={{ 
+                            fontWeight: openingLinks ? 'bold' : 'regular',
+                            color: openingLinks ? '#4caf50' : 'primary.main'
+                          }}
                         >
                           {link.url}
-                        </a>
-                      </td>
-                      <td>行 {link.row + 1}, 列 {link.col + 1}</td>
+                        </Link>
+                      </TableCell>
+                      <TableCell>行 {link.row + 1}, 列 {link.col + 1}</TableCell>
                       {openingLinks && (
-                        <td>
-                          <button 
+                        <TableCell>
+                          <IconButton
+                            color="primary"
+                            size="small"
                             onClick={() => window.open(link.url, '_blank')}
-                            className="open-this-link-btn"
                           >
-                            打开
-                          </button>
-                        </td>
+                            <OpenInNewIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
                       )}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="links-cards">
-                {links.map((link, index) => (
-                  <div 
-                    key={index} 
-                    className={`
-                      link-card
-                      ${currentLinkIndex === index ? 'current-link' : ''}
-                      ${selectedLinks.has(index) ? 'selected-link' : ''}
-                    `}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+              {links.map((link, index) => (
+                <Box 
+                  key={index} 
+                  sx={{ 
+                    width: { xs: '100%', sm: 'calc(50% - 16px)', md: 'calc(33.333% - 16px)' },
+                    mb: 2 
+                  }}
+                >
+                  <Card 
+                    variant="outlined" 
+                    sx={{ 
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      border: selectedLinks.has(index) ? '1px solid #2196F3' : '1px solid #eee',
+                      boxShadow: selectedLinks.has(index) ? '0 2px 8px rgba(33, 150, 243, 0.15)' : 'none',
+                      transition: 'all 0.3s',
+                      '&:hover': {
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
                   >
-                    <div className="card-header">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedLinks.has(index)}
-                        onChange={() => toggleLinkSelection(index)}
-                      />
-                      <span className="link-index">#{index + 1}</span>
-                    </div>
-                    <div className="card-body">
-                      <div className="link-text">{link.text}</div>
-                      <a 
-                        href={link.url} 
-                        target="_blank" 
+                    <CardHeader
+                      avatar={
+                        <Checkbox
+                          checked={selectedLinks.has(index)}
+                          onChange={() => toggleLinkSelection(index)}
+                        />
+                      }
+                      title={`链接 #${index + 1}`}
+                      sx={{ backgroundColor: '#f5f7fa', borderBottom: '1px solid #eee' }}
+                    />
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium' }}>
+                        {link.text}
+                      </Typography>
+                      <Link
+                        href={link.url}
+                        target="_blank"
                         rel="noopener noreferrer"
-                        className="link-url"
+                        sx={{ 
+                          display: 'block', 
+                          mb: 2,
+                          wordBreak: 'break-all'
+                        }}
                       >
                         {link.url}
-                      </a>
-                      <div className="link-position">
-                        位置: 行 {link.row + 1}, 列 {link.col + 1}
-                      </div>
-                    </div>
-                    <div className="card-footer">
-                      <button 
+                      </Link>
+                      <Chip 
+                        label={`行 ${link.row + 1}, 列 ${link.col + 1}`} 
+                        size="small" 
+                        variant="outlined"
+                      />
+                    </CardContent>
+                    <Divider />
+                    <CardActions>
+                      <Button
+                        startIcon={<OpenInNewIcon />}
+                        fullWidth
                         onClick={() => window.open(link.url, '_blank')}
-                        className="card-open-btn"
+                        color="primary"
                       >
                         打开链接
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
       ) : (
-        selectedSheet && !isProcessing && <p>未在选定的工作表中找到链接</p>
+        selectedSheet && !isProcessing && (
+          <Typography variant="body1" align="center" sx={{ my: 3 }}>
+            未在选定的工作表中找到链接
+          </Typography>
+        )
       )}
-    </div>
+    </Paper>
   );
 };
 
