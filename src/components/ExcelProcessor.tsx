@@ -58,6 +58,7 @@ const ExcelProcessor = () => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedLinks, setSelectedLinks] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [filterStats, setFilterStats] = useState({ total: 0, filtered: 0 });
 
   const handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -149,6 +150,8 @@ const ExcelProcessor = () => {
   const extractLinksFromSheet = (workbook: XLSX.WorkBook, sheetName: string) => {
     const worksheet = workbook.Sheets[sheetName];
     const extractedLinks: ExcelLink[] = [];
+    let totalCells = 0;
+    let validLinks = 0;
 
     // 查找包含超链接的单元格
     Object.keys(worksheet).forEach((cell) => {
@@ -158,18 +161,51 @@ const ExcelProcessor = () => {
       
       // 检查单元格是否有超链接
       if (cellData.l && cellData.l.Target) {
-        const cellAddress = XLSX.utils.decode_cell(cell);
+        totalCells++;
         
-        extractedLinks.push({
-          text: cellData.v || '无文本',
-          url: cellData.l.Target,
-          row: cellAddress.r,
-          col: cellAddress.c
-        });
+        // 验证链接是否有效
+        const url = cellData.l.Target;
+        if (isValidUrl(url)) {
+          validLinks++;
+          const cellAddress = XLSX.utils.decode_cell(cell);
+          extractedLinks.push({
+            text: cellData.v || '无文本',
+            url: url,
+            row: cellAddress.r,
+            col: cellAddress.c
+          });
+        }
       }
     });
 
+    setFilterStats({ total: totalCells, filtered: totalCells - validLinks });
     setLinks(extractedLinks);
+  };
+
+  // 验证URL是否有效
+  const isValidUrl = (url: string): boolean => {
+    // 检查是否为空
+    if (!url || url.trim() === '') return false;
+    
+    try {
+      // 尝试解析URL
+      new URL(url);
+      
+      // 检查协议，必须是http或https或mailto
+      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
+        return true;
+      }
+      
+      // 如果是相对路径或者其他协议，判断是否包含域名结构
+      if (url.includes('.') && !url.startsWith('javascript:')) {
+        return true;
+      }
+    } catch {
+      // URL解析错误，可能不是有效的URL
+      return false;
+    }
+    
+    return false;
   };
 
   // 处理链接选择
@@ -382,6 +418,14 @@ const ExcelProcessor = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6" component="h3">
               找到 {links.length} 个链接
+              {filterStats.filtered > 0 && (
+                <Chip 
+                  label={`已过滤 ${filterStats.filtered} 个无效链接`} 
+                  color="warning" 
+                  size="small" 
+                  sx={{ ml: 1 }} 
+                />
+              )}
             </Typography>
             <ToggleButtonGroup
               value={viewMode}
@@ -595,7 +639,16 @@ const ExcelProcessor = () => {
       ) : (
         selectedSheet && !isProcessing && (
           <Typography variant="body1" align="center" sx={{ my: 3 }}>
-            未在选定的工作表中找到链接
+            未在选定的工作表中找到有效链接
+            {filterStats.filtered > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <Chip 
+                  label={`已过滤 ${filterStats.filtered} 个无效链接`} 
+                  color="warning" 
+                  size="small" 
+                />
+              </Box>
+            )}
           </Typography>
         )
       )}
